@@ -234,6 +234,7 @@ interface HardcodeApi {
     ): Promise<{
       hasChanges: boolean;
       changeCount: number;
+      hasTaskChanges: boolean;
       issue?: string;
       mounted: boolean;
       mountedTask?: { workspaceId: string; taskId: string; taskName: string };

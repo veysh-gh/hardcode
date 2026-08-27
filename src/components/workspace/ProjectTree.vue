@@ -72,7 +72,7 @@ export default defineComponent({
           path: folder.path,
           type: "directory" as const,
           meta: folder.defaultBranch,
-          expanded: this.diffMode !== "full" || this.fullExpanded.get(folder.path) === true,
+          expanded: this.diffMode !== "full" || this.fullExpanded.get(folder.path) !== false,
           loading: false,
           children: null,
         };

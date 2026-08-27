@@ -28,7 +28,11 @@
         </AppButton>
       </div>
     </header>
-    <div ref="editorElement" class="editor-content" :class="{ 'is-merge': Boolean(file?.mergeConflict) }"></div>
+    <div v-if="!file" class="editor-empty-state">
+      <strong>No file selected</strong>
+      <span>Select a file from the project tree to view or edit it.</span>
+    </div>
+    <div v-show="file" ref="editorElement" class="editor-content" :class="{ 'is-merge': Boolean(file?.mergeConflict) }"></div>
   </section>
 </template>
 
@@ -488,6 +492,8 @@ export default defineComponent({
 .editor-context-button.app-button { flex: 0 0 auto; }
 .editor-file-action.app-button { display: grid; place-items: center; color: var(--basic-text-content); }
 .editor-file-action svg { width: 15px; height: 15px; }
+.editor-empty-state { display: grid; place-content: center; gap: 6px; min-width: 0; min-height: 0; padding: 24px; color: var(--color-text-secondary); text-align: center; font: 13px/1.4 system-ui, sans-serif; }
+.editor-empty-state strong { color: var(--basic-text-heading); font-size: 14px; }
 .editor-content { min-width: 0; min-height: 0; height: 100%; overflow: hidden; }
 :deep(.cm-editor) { height: 100%; }
 :deep(.cm-merge-block-start) { position: relative; box-sizing: border-box; }

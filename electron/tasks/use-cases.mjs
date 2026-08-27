@@ -78,12 +78,14 @@ export function createTaskUseCases({ workspaceStore, taskService, chatService })
   async function getTaskStatus({ workspaceId, taskId }) {
     const { workspace, task } = await getTaskContext(workspaceId, taskId);
     const changes = await taskOverlayOperations(workspace, task);
+    const taskChanges = await taskOverlayOperations(workspace, task, "task");
     const mountedTask = overlayMountManager.current();
     const isMounted = mountedTask?.workspaceId === workspaceId && mountedTask?.taskId === taskId;
 
     return {
       hasChanges: changes.operations.length > 0 || changes.unmappedPaths.length > 0,
       changeCount: changes.operations.length + changes.unmappedPaths.length,
+      hasTaskChanges: taskChanges.operations.length > 0 || taskChanges.unmappedPaths.length > 0,
       issue: taskIssue(changes),
       mounted: isMounted,
       mountedTask: mountedTask && !isMounted ? mountedTask : undefined,

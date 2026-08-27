@@ -112,11 +112,13 @@
       ></div>
       <section class="right-pane">
         <nav class="right-pane-tabs" aria-label="Project view">
-          <AppButton type="button" size="small" variant="subtle" :active="activeTask.rightView === 'full'" @click="setRightView('full')">Full</AppButton>
           <AppButton type="button" size="small" variant="subtle" :active="activeTask.rightView === 'current'" @click="setRightView('current')">
             Current diff<span v-if="activeTask.overlayState === 'dirty'" class="diff-dot" aria-label="Changes"></span>
           </AppButton>
-          <AppButton type="button" size="small" variant="subtle" :active="activeTask.rightView === 'task'" @click="setRightView('task')">Task diff</AppButton>
+          <AppButton type="button" size="small" variant="subtle" :active="activeTask.rightView === 'task'" @click="setRightView('task')">
+            Task diff<span v-if="activeTask.hasTaskChanges" class="diff-dot" aria-label="Changes"></span>
+          </AppButton>
+          <AppButton type="button" size="small" variant="subtle" :active="activeTask.rightView === 'full'" @click="setRightView('full')">Full</AppButton>
         </nav>
         <div class="right-pane-content" :style="rightPaneGridStyle">
           <EditorComponent
@@ -288,8 +290,10 @@ interface OpenTask extends Omit<WorkspaceTaskRecord, "chats"> {
   chats: OpenChat[];
   selectedFile: WorkspaceFile | null;
   rightView: WorkspaceDiffMode;
+  rightViewChosen: boolean;
   treeRevision: number;
   overlayState: "checking" | "clean" | "dirty" | "error";
+  hasTaskChanges: boolean;
   overlayIssue: string;
   overlayRequestId: number;
   mounted: boolean;
@@ -326,8 +330,10 @@ function openTask(record: WorkspaceTaskRecord): OpenTask {
     chats: record.chats.map((chat) => newChat(chat)),
     selectedFile: null,
     rightView: "full",
+    rightViewChosen: false,
     treeRevision: 0,
     overlayState: "checking",
+    hasTaskChanges: false,
     overlayIssue: "",
     overlayRequestId: 0,
     mounted: false,
@@ -554,6 +560,7 @@ export default defineComponent({
           return;
         }
         task.overlayState = status.hasChanges ? "dirty" : "clean";
+        task.hasTaskChanges = status.hasTaskChanges;
         task.overlayIssue = status.issue ?? "";
         task.mounted = status.mounted;
         task.mountedTask = status.mountedTask;
@@ -752,8 +759,10 @@ export default defineComponent({
         readPaths: [],
         selectedFile: null,
         rightView: "full",
+        rightViewChosen: false,
         treeRevision: 0,
         overlayState: "clean",
+        hasTaskChanges: false,
         overlayIssue: "",
         overlayRequestId: 0,
         mounted: false,
@@ -793,6 +802,10 @@ export default defineComponent({
       void (async () => {
         await this.refreshTaskOverlayState(task);
         if (this.activeTask?.id !== task.id) return;
+        if (!task.rightViewChosen && task.overlayState === "dirty") {
+          task.rightView = "current";
+          task.rightViewChosen = true;
+        }
         task.treeRevision += 1;
         if (task.selectedFilePath) await this.loadProjectFile(task, task.selectedFilePath);
       })();
@@ -803,7 +816,9 @@ export default defineComponent({
     },
     async setRightView(view: WorkspaceDiffMode) {
       const task = this.activeTask;
-      if (!task || task.rightView === view) return;
+      if (!task) return;
+      task.rightViewChosen = true;
+      if (task.rightView === view) return;
       task.rightView = view;
       if (task.selectedFilePath) await this.loadProjectFile(task, task.selectedFilePath);
     },
@@ -973,8 +988,10 @@ export default defineComponent({
         task.mounted = false;
         task.mountedTask = undefined;
         task.overlayState = "clean";
+        task.hasTaskChanges = false;
         task.overlayIssue = "";
         task.rightView = "full";
+        task.rightViewChosen = false;
         task.treeRevision += 1;
         task.completionSeen = false;
         this.finishTaskName = "";
