@@ -85,6 +85,8 @@
             :start-error="chat.startError"
             :running="chat.running"
             :thought="chat.thought"
+            :has-older="chat.hasOlderHistory"
+            :loading-older="chat.loadingOlderHistory"
             :model="chat.model"
             :commands="chat.commands"
             :chat-id="chat.id"
@@ -96,6 +98,8 @@
             @open-link="openExternal(chat, $event)"
             @open-file="openToolFile(chat, $event)"
             @retry="startChat(activeTask, chat)"
+            @load-older="loadOlderChatHistory(chat)"
+            @unload-older="unloadOlderChatHistory(chat)"
           />
         </div>
       </section>
@@ -275,6 +279,9 @@ interface OpenChat extends WorkspaceTaskChatRecord {
   startError: string;
   model: ChatModel | null;
   commands: ChatCommand[];
+  hasOlderHistory: boolean;
+  loadingOlderHistory: boolean;
+  historyBaselineEntryId: string;
 }
 
 interface OpenTask extends Omit<WorkspaceTaskRecord, "chats"> {
@@ -306,6 +313,9 @@ function newChat(record?: Partial<WorkspaceTaskChatRecord>): OpenChat {
     startError: "",
     model: null,
     commands: [],
+    hasOlderHistory: false,
+    loadingOlderHistory: false,
+    historyBaselineEntryId: "",
   };
 }
 
@@ -573,8 +583,10 @@ export default defineComponent({
         chat.ready = result.ready;
         chat.model = result.model;
         chat.commands = result.commands;
+        chat.hasOlderHistory = (result as typeof result & { hasMore: boolean }).hasMore;
         if (result.entries.length) {
           chat.entries = result.entries;
+          chat.historyBaselineEntryId = result.entries[0]?.id ?? "";
           chat.hasActivity = true;
         }
         await this.persistTasks();
@@ -588,6 +600,31 @@ export default defineComponent({
           content: chat.startError,
         });
       }
+    },
+    async loadOlderChatHistory(chat: OpenChat) {
+      if (chat.loadingOlderHistory || !chat.hasOlderHistory || !window.hardcode) return;
+      const firstEntry = chat.entries[0];
+      const match = firstEntry?.id.match(/^history-(\d+)$/);
+      if (!match) { chat.hasOlderHistory = false; return; }
+      chat.loadingOlderHistory = true;
+      try {
+        const historyApi = window.hardcode.chat as typeof window.hardcode.chat & {
+          history(chatId: string, before: number): Promise<{ entries: ChatEntry[]; hasMore: boolean }>;
+        };
+        const result = await historyApi.history(chat.id, Number(match[1]));
+        if (result.entries.length) chat.entries = [...result.entries, ...chat.entries];
+        chat.hasOlderHistory = result.hasMore;
+      } catch {
+        // Keep the cursor available so a transient IPC failure can be retried by scrolling again.
+      } finally {
+        chat.loadingOlderHistory = false;
+      }
+    },
+    unloadOlderChatHistory(chat: OpenChat) {
+      const baselineIndex = chat.entries.findIndex(({ id }) => id === chat.historyBaselineEntryId);
+      if (baselineIndex <= 0) return;
+      chat.entries = chat.entries.slice(baselineIndex);
+      chat.hasOlderHistory = true;
     },
     async startTaskChats(task: OpenTask) {
       await Promise.all(task.chats.map((chat) => this.startChat(task, chat)));
@@ -747,6 +784,7 @@ export default defineComponent({
       if (!task) return;
       const previousTask = this.activeTask;
       if (previousTask?.id !== task.id) {
+        previousTask?.chats.forEach((chat) => this.unloadOlderChatHistory(chat));
         this.acknowledgeCompletedTask(previousTask);
         void this.persistTasks();
       }

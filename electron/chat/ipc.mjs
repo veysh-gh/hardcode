@@ -10,6 +10,7 @@ const {
   createChatSession,
   toIpcSafe,
   historyEntries,
+  historyPage,
   getChatCommands,
   requireChat,
   getChatCompletions,
@@ -28,7 +29,7 @@ router.handle(IPC.chat.start, async (
   return toIpcSafe({
     chatId,
     sessionFile: chat.session.sessionFile,
-    entries: historyEntries(chat.session.messages),
+    ...historyPage(chat.session.messages),
     ready: true,
     model: chat.session.model && chat.session.model.provider !== "unknown"
       ? {
@@ -39,6 +40,11 @@ router.handle(IPC.chat.start, async (
       : null,
     commands: getChatCommands(chat.session),
   });
+});
+
+router.handle(IPC.chat.history, async (event, { chatId, before }) => {
+  const chat = requireChat(event, chatId);
+  return toIpcSafe(historyPage(chat.session.messages, before));
 });
 
 router.handle(IPC.chat.complete, async (event, { chatId, command, argumentPrefix }) => {

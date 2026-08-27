@@ -50,6 +50,11 @@ function parseBoolean(value, label) {
   return value;
 }
 
+function parseNonNegativeInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`Invalid ${label}.`);
+  return value;
+}
+
 function parseArray(value, label) {
   if (!Array.isArray(value)) throw new Error(`Invalid ${label}.`);
   return value;
@@ -200,6 +205,10 @@ export const IPC = Object.freeze({
       workspaceId: parseId(value.workspaceId, "workspace id"),
       taskId: parseId(value.taskId, "task id"),
       sessionFile: parseOptionalString(value.sessionFile, "session file"),
+    })),
+    history: requestContract("chat:history", (value) => ({
+      chatId: parseId(value.chatId, "chat id"),
+      before: parseNonNegativeInteger(value.before, "history cursor"),
     })),
     complete: requestContract("chat:complete", (value) => ({
       chatId: parseId(value.chatId, "chat id"),

@@ -7,7 +7,8 @@
       <AppButton class="icon-control-button close-chat-button" size="icon" variant="subtle" type="button" aria-label="Close chat" title="Close chat" @click="$emit('close')">×</AppButton>
     </header>
 
-    <div ref="messagesElement" class="chat-messages" aria-live="polite">
+    <div ref="messagesElement" class="chat-messages" aria-live="polite" @scroll="handleMessagesScroll">
+      <div v-if="loadingOlder" class="history-loader" role="status"><span class="history-spinner" aria-hidden="true"></span>Loading older messages…</div>
       <template v-for="item in displayItems" :key="item.id">
         <div v-if="item.kind === 'user' || item.kind === 'assistant'" class="chat-message markdown-body" :class="`chat-message-${item.kind}`" v-html="renderMarkdown(item.content)" @click="handleMarkdownClick"></div>
         <div v-else-if="item.kind === 'tool-group' && (item.category === 'read' || isCompactToolGroup(item))" class="tool-activity">
@@ -109,11 +110,12 @@ type DisplayItem = ChatEntry | ToolGroup;
 export default defineComponent({
   name: "ChatComponent",
   components: { AppButton, InteractionHost, MiniDiffViewer, SlashCommandMenu },
-  emits: ["close", "branch", "send", "answer", "abort", "open-link", "open-file", "retry"],
+  emits: ["close", "branch", "send", "answer", "abort", "open-link", "open-file", "retry", "load-older"],
   props: {
     entries: { type: Array as PropType<ChatEntry[]>, required: true },
     interactions: { type: Array as PropType<ChatInteraction[]>, required: true },
     ready: { type: Boolean, default: false }, startError: { type: String, default: "" }, running: { type: Boolean, default: false }, thought: { type: String, default: "" },
+    hasOlder: { type: Boolean, default: false }, loadingOlder: { type: Boolean, default: false },
     model: { type: Object as PropType<ChatModel | null>, default: null }, commands: { type: Array as PropType<ChatCommand[]>, default: () => [] }, chatId: { type: String, required: true },
   },
   data() {
@@ -121,9 +123,12 @@ export default defineComponent({
       draft: "", activeCommandIndex: 0, slashMenuDismissed: false, completions: [] as ChatCompletion[], completionRequest: 0,
       workStartedAt: 0, elapsedMs: 0, workComplete: false,
       workingMessage: "", workTimer: null as ReturnType<typeof setInterval> | null,
+      olderScrollHeight: 0,
+      olderFirstEntryId: "",
+      wasNearBottom: true,
     };
   },
-  mounted() { this.resizeComposer(); window.addEventListener("resize", this.resizeComposer); this.scrollToBottom(); if (this.running) this.startWork(); },
+  mounted() { this.resizeComposer(); window.addEventListener("resize", this.resizeComposer); this.scrollToBottom(true); if (this.running) this.startWork(); },
   beforeUnmount() { window.removeEventListener("resize", this.resizeComposer); this.stopWorkTimer(); },
   computed: {
     slashQuery(): string | null { if (!this.draft.startsWith("/") || /\s/.test(this.draft)) return null; return this.draft.slice(1).toLowerCase(); },
@@ -149,7 +154,16 @@ export default defineComponent({
   },
   watch: {
     draft() { this.activeCommandIndex = 0; this.slashMenuDismissed = false; void this.loadCompletions(); void nextTick(() => this.resizeComposer()); },
-    entries: { deep: true, handler() { this.scrollToBottom(); } },
+    entries: { deep: true, handler() {
+      if (this.olderScrollHeight && this.entries[0]?.id !== this.olderFirstEntryId) {
+        void nextTick(() => {
+          const element = this.$refs.messagesElement as HTMLElement | undefined;
+          if (element) element.scrollTop += element.scrollHeight - this.olderScrollHeight;
+          this.olderScrollHeight = 0;
+          this.olderFirstEntryId = "";
+        });
+      } else this.scrollToBottom();
+    } },
     interactions: { deep: true, handler() { this.scrollToBottom(); } },
     running(value: boolean) { if (value) this.startWork(); else if (this.workStartedAt) this.finishWork(); },
   },
@@ -273,6 +287,15 @@ export default defineComponent({
       else html = html.replace(/(\/\/.*|#.*)$/gm, '<span class="code-comment">$1</span>').replace(/(&quot;.*?&quot;|&#39;.*?&#39;)/g, '<span class="code-string">$1</span>').replace(/\b(const|let|var|function|return|import|from|export|if|else|for|class|new|true|false|null)\b/g, '<span class="code-keyword">$1</span>');
       return html;
     },
+    handleMessagesScroll() {
+      const element = this.$refs.messagesElement as HTMLElement | undefined;
+      if (!element) return;
+      this.wasNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= 30;
+      if (!this.hasOlder || this.loadingOlder || element.scrollTop > 80) return;
+      this.olderScrollHeight = element.scrollHeight;
+      this.olderFirstEntryId = this.entries[0]?.id ?? "";
+      this.$emit("load-older");
+    },
     resizeComposer() {
       const element = this.$refs.composerElement as HTMLTextAreaElement | undefined;
       if (!element) return;
@@ -290,7 +313,12 @@ export default defineComponent({
       if (this.showSlashMenu) { if (event.key === "ArrowDown") { event.preventDefault(); const count = this.filteredCompletions.length || this.filteredCommands.length; this.activeCommandIndex = (this.activeCommandIndex + 1) % count; return; } if (event.key === "ArrowUp") { event.preventDefault(); const count = this.filteredCompletions.length || this.filteredCommands.length; this.activeCommandIndex = (this.activeCommandIndex - 1 + count) % count; return; } if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); if (this.filteredCompletions.length) { const option = this.filteredCompletions[this.activeCommandIndex]; if (option) this.selectCompletion(option); } else { const command = this.filteredCommands[this.activeCommandIndex]; if (command) this.selectCommand(command); } return; } if (event.key === "Escape") { event.preventDefault(); this.slashMenuDismissed = true; return; } }
       if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); this.sendMessage(); }
     },
-    scrollToBottom() { void nextTick(() => { const element = this.$refs.messagesElement as HTMLElement | undefined; if (element) element.scrollTop = element.scrollHeight; }); },
+    scrollToBottom(force = false) {
+      void nextTick(() => {
+        const element = this.$refs.messagesElement as HTMLElement | undefined;
+        if (element && (force || this.wasNearBottom)) element.scrollTop = element.scrollHeight;
+      });
+    },
   },
 });
 </script>
@@ -303,6 +331,8 @@ export default defineComponent({
 .branch-chat-button.app-button { position: relative; display: grid; place-items: center; width: 28px; height: 28px; margin: -28px 0 0 auto; padding: 5px; }
 .branch-chat-button svg { width: 16px; height: 16px; }
 .chat-messages { min-height: 0; padding: 8px 16px 0; overflow-y: auto; }
+.history-loader { display: flex; justify-content: center; align-items: center; gap: 7px; min-height: 32px; color: var(--basic-text-dim); font-size: 12px; }
+.history-spinner { width: 12px; height: 12px; border: 2px solid var(--color-border-strong); border-top-color: var(--accent-spinner); border-radius: 50%; animation: work-spin 800ms linear infinite; }
 .chat-message { width: fit-content; max-width: min(80%, 680px); margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-message-user { margin-left: auto; color: var(--color-text); background: var(--color-elevated-strong); }
 .chat-message-assistant { padding-left: 0; background: transparent; }

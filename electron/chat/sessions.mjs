@@ -39,45 +39,72 @@ function textContent(content) {
     .join("\n");
 }
 
-function historyEntries(messages) {
-  const entries = [];
+const HISTORY_PAGE_SIZE = 30;
+
+function historyToolCalls(messages) {
   const toolCalls = new Map();
-  for (const [index, message] of messages.entries()) {
-    const id = `history-${index}`;
-    if (message?.role === "user") {
-      const content = textContent(message.content);
-      if (content) entries.push({ id, kind: "user", content });
-    } else if (message?.role === "assistant") {
-      const content = textContent(message.content);
-      if (content) entries.push({ id, kind: "assistant", content });
-      if (Array.isArray(message.content)) {
-        for (const part of message.content) {
-          if (part?.type === "toolCall" && typeof part.id === "string") {
-            toolCalls.set(part.id, { name: part.name, input: JSON.stringify(part.arguments ?? {}, null, 2) });
-          }
-        }
+  for (const message of messages) {
+    if (message?.role !== "assistant" || !Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      if (part?.type === "toolCall" && typeof part.id === "string") {
+        toolCalls.set(part.id, { name: part.name, input: JSON.stringify(part.arguments ?? {}, null, 2) });
       }
-    } else if (message?.role === "toolResult") {
-      const toolCall = toolCalls.get(message.toolCallId);
-      entries.push({
-        id,
-        kind: "tool",
-        title: message.toolName || toolCall?.name || "Tool",
-        input: toolCall?.input,
-        content: textContent(message.content),
-        status: message.isError ? "error" : "done",
-      });
-    } else if (message?.role === "bashExecution") {
-      entries.push({
-        id,
-        kind: "tool",
-        title: message.command || "Command",
-        content: message.output || "",
-        status: message.exitCode && message.exitCode !== 0 ? "error" : "done",
-      });
     }
   }
-  return entries;
+  return toolCalls;
+}
+
+function historyEntry(message, index, toolCalls) {
+  const id = `history-${index}`;
+  if (message?.role === "user") {
+    const content = textContent(message.content);
+    return content ? { id, kind: "user", content } : null;
+  }
+  if (message?.role === "assistant") {
+    const content = textContent(message.content);
+    return content ? { id, kind: "assistant", content } : null;
+  }
+  if (message?.role === "toolResult") {
+    const toolCall = toolCalls.get(message.toolCallId);
+    return {
+      id,
+      kind: "tool",
+      title: message.toolName || toolCall?.name || "Tool",
+      input: toolCall?.input,
+      content: textContent(message.content),
+      status: message.isError ? "error" : "done",
+    };
+  }
+  if (message?.role === "bashExecution") {
+    return {
+      id,
+      kind: "tool",
+      title: message.command || "Command",
+      content: message.output || "",
+      status: message.exitCode && message.exitCode !== 0 ? "error" : "done",
+    };
+  }
+  return null;
+}
+
+function historyEntries(messages) {
+  const toolCalls = historyToolCalls(messages);
+  return messages.map((message, index) => historyEntry(message, index, toolCalls)).filter(Boolean);
+}
+
+function historyPage(messages, before = messages.length, limit = HISTORY_PAGE_SIZE) {
+  const toolCalls = historyToolCalls(messages);
+  const entries = [];
+  for (let index = Math.min(before, messages.length) - 1; index >= 0 && entries.length < limit; index -= 1) {
+    const entry = historyEntry(messages[index], index, toolCalls);
+    if (entry) entries.push(entry);
+  }
+  const firstIndex = Number(entries.at(-1)?.id.replace("history-", ""));
+  let hasMore = false;
+  for (let index = Number.isFinite(firstIndex) ? firstIndex - 1 : -1; index >= 0; index -= 1) {
+    if (historyEntry(messages[index], index, toolCalls)) { hasMore = true; break; }
+  }
+  return { entries: entries.reverse(), hasMore };
 }
 
 function getModelRuntime() {
@@ -623,6 +650,7 @@ function registerIpc(ipc) {
       createChatSession,
       toIpcSafe,
       historyEntries,
+      historyPage,
       getChatCommands,
       requireChat,
       getChatCompletions,

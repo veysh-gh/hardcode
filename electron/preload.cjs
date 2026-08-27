@@ -40,6 +40,7 @@ const channels = Object.freeze({
   },
   chat: {
     start: "chat:start",
+    history: "chat:history",
     send: "chat:send",
     complete: "chat:complete",
     abort: "chat:abort",
@@ -120,6 +121,7 @@ contextBridge.exposeInMainWorld("hardcode", {
   chat: {
     start: (chatId, workspaceId, taskId, sessionFile) =>
       ipcRenderer.invoke(channels.chat.start, { chatId, workspaceId, taskId, sessionFile }),
+    history: (chatId, before) => ipcRenderer.invoke(channels.chat.history, { chatId, before }),
     send: (chatId, message) => ipcRenderer.invoke(channels.chat.send, { chatId, message }),
     complete: (chatId, command, argumentPrefix) =>
       ipcRenderer.invoke(channels.chat.complete, { chatId, command, argumentPrefix }),
