@@ -1181,7 +1181,7 @@ export default defineComponent({
 .app { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; }
 .app > header { padding: 12px; }
 .app-header { z-index: 30; display: flex; gap: 10px; align-items: center; min-height: 33px; border-bottom: 1px solid var(--basic-border-subtle); background: var(--color-background); -webkit-app-region: drag; }
-.app-header :deep(.app-button), .app-header input { -webkit-app-region: no-drag; }
+.app-header :deep(.app-button), .app-header :deep(input) { -webkit-app-region: no-drag; }
 .hamburger-button { flex-direction: column; gap: 4px; }
 .hamburger-button span { width: 14px; height: 1px; background: currentColor; }
 .icon-control-button.app-button { display: flex; align-items: center; justify-content: center; font-size: 20px; }
