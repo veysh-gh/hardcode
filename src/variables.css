@@ -1,0 +1,142 @@
+:root {
+  /* ### CORE – zentrale Hauptfarben der App: visuelle Basis ### */
+  --color-background: #090c10;
+  --color-panel: #0d1117;
+  --color-elevated: #111923;
+  --color-elevated-strong: #172131;
+  --color-border: #1d2838;
+  --color-border-strong: #25364d;
+  --color-text: #d7dde7;
+  --color-text-secondary: #8491a3;
+
+  /* ### BASIC – allgemeine App-Farben für Controls, Layout und Inhalte ### */
+  --basic-border-subtle: #131923;
+  --basic-border-muted: #182333;
+  --basic-border-hover: #405b7d;
+  --basic-border-focus: #49698f;
+  --basic-scrollbar: #26384f;
+  --basic-scrollbar-hover: #36506f;
+  --basic-text-muted: #687587;
+  --basic-text-dim: #718198;
+  --basic-text-light: #ffffff;
+  --basic-text-heading: #f0f3f7;
+  --basic-text-label: #aab5c4;
+  --basic-text-content: #aeb9c8;
+  --basic-text-code: #cbd5e2;
+  --basic-content: #c7d0dc;
+
+  /* ### STATES – Zustände und Aktionen ### */
+  --state-action: #244d78;
+  --state-action-border: #35669c;
+  --state-action-text: #ffffff;
+  --state-danger: #241419;
+  --state-danger-border: #553039;
+  --state-danger-text: #ef9a9f;
+  --state-error: #ff8a8a;
+  --state-success: #4dbb78;
+  --state-success-text: #8fc59f;
+  --state-warning: #d3a72f;
+  --state-attention: #e05c63;
+  --state-idle: #596474;
+  --state-failed-border: #66343a;
+  --state-complete-border: #294937;
+
+  /* ### FEATURES – Diff, Editor und Markdown ### */
+  --feature-editor-gutter-background: #131923;
+  --feature-diff-added: #a8d9ad;
+  --feature-diff-removed: #f0a5a5;
+  --feature-diff-modified: #d39b47;
+  --feature-diff-deleted: #e05c63;
+  --feature-code-keyword: #c792ea;
+  --feature-code-string: #a8cc8c;
+  --feature-code-comment: #68788d;
+  --feature-link: #77b5ef;
+  --feature-link-hover: #a8d2fa;
+  --feature-markdown-heading: #e7edf5;
+  --feature-markdown-quote: #39516d;
+  --feature-markdown-quote-text: #aebdce;
+  --feature-markdown-code: #d8b8ed;
+
+  /* ### ACCENTS – sonstige Akzent- und Icon-Farben ### */
+  --accent-icon: #70a6d8;
+  --accent-spinner: #77a9d8;
+  --accent-failed-icon: #e2767d;
+  --accent-info: #6f829d;
+  --accent-interaction-content: #b6c0ce;
+
+  /* ### OVERLAYS – transparente Ebenen und Schatten ### */
+  --overlay-backdrop: rgb(3 6 10 / 72%);
+  --overlay-shadow-dialog: rgb(0 0 0 / 55%);
+  --overlay-shadow-panel: rgb(0 0 0 / 30%);
+  --overlay-shadow-card: rgb(0 0 0 / 22%);
+  --overlay-shadow-menu: rgb(0 0 0 / 35%);
+  --overlay-diff-added: rgb(46 160 67 / 15%);
+  --overlay-diff-removed: rgb(248 81 73 / 15%);
+}
+
+/* Light mode only replaces colours whose contrast depends on a dark surface. */
+:root[data-theme="light"] {
+  /* CORE */
+    --color-background: #f5f7fa;
+    --color-panel: #ffffff;
+    --color-elevated: #edf2f7;
+    --color-elevated-strong: #e2e8f0;
+    --color-border: #d8e0ea;
+    --color-border-strong: #c5d0df;
+    --color-text: #1b2635;
+    --color-text-secondary: #526174;
+
+    /* BASIC */
+    --basic-border-subtle: #e5eaf0;
+    --basic-border-muted: #d8e0ea;
+    --basic-border-hover: #9aafc5;
+    --basic-border-focus: #5d86b3;
+    --basic-scrollbar: #b6c3d1;
+    --basic-scrollbar-hover: #8fa3b8;
+    --basic-text-muted: #687587;
+    --basic-text-dim: #5d6c7e;
+    --basic-text-heading: #172131;
+    --basic-text-label: #465568;
+    --basic-text-content: #39495b;
+    --basic-text-code: #29394a;
+    --basic-content: #324255;
+
+    /* STATES */
+    --state-action: #e5f0fc;
+    --state-action-border: #76a3d4;
+    --state-action-text: #1b2635;
+    --state-danger: #fcebed;
+    --state-danger-border: #dba1a8;
+    --state-danger-text: #ae2935;
+    --state-error: #c02d38;
+    --state-success: #258448;
+    --state-success-text: #287342;
+    --state-warning: #9a6e00;
+    --state-attention: #c83d49;
+    --state-idle: #697586;
+    --state-failed-border: #c9828a;
+    --state-complete-border: #74ad86;
+
+    /* FEATURES */
+    --feature-editor-gutter-background: #edf2f7;
+    --feature-diff-added: #257a36;
+    --feature-diff-removed: #b63039;
+    --feature-diff-modified: #9a6700;
+    --feature-diff-deleted: #c83d49;
+    --feature-code-keyword: #7a3fa0;
+    --feature-code-string: #387a26;
+    --feature-code-comment: #66758a;
+    --feature-link: #2369a8;
+    --feature-link-hover: #174f83;
+    --feature-markdown-heading: #1b2635;
+    --feature-markdown-quote: #dbe7f3;
+    --feature-markdown-quote-text: #40546a;
+    --feature-markdown-code: #753b8c;
+
+    /* ACCENTS */
+    --accent-icon: #3b73aa;
+    --accent-spinner: #3975ae;
+    --accent-failed-icon: #bd4b55;
+  --accent-info: #536b87;
+  --accent-interaction-content: #3f5063;
+}
